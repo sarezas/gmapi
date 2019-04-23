@@ -6,14 +6,12 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { IdentificationComponent } from './components/identification/identification.component';
 import { GeolocationComponent } from './components/geolocation/geolocation.component';
-import { ArrivalComponent } from './components/arrival/arrival.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     IdentificationComponent,
     GeolocationComponent,
-    ArrivalComponent
   ],
   imports: [
     BrowserModule,

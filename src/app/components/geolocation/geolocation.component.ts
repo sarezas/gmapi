@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, Renderer2 } from '@angular/core';
 
 import {} from 'googlemaps';
 
@@ -9,11 +9,20 @@ import {} from 'googlemaps';
 })
 export class GeolocationComponent implements OnInit {
   @ViewChild('map') mapEl: ElementRef;
+  @ViewChild('info') infoEl: ElementRef;
   map: google.maps.Map;
-  marker: google.maps.Marker;
+  clientMarker: google.maps.Marker;
+  clientPosition: any;
+  stationMarker: google.maps.Marker;
+  stationPosition = new google.maps.LatLng(54.9299, 23.9969);
+  dirService = new google.maps.DirectionsService;
+  dirDisplay = new google.maps.DirectionsRenderer;
+
   cString = 'You';
   infoWindow = new google.maps.InfoWindow;
-  constructor() { }
+  arrivalTime = '21:00';
+
+  constructor(private renderer: Renderer2) { }
 
   ngOnInit() {
     // set map properties
@@ -30,15 +39,26 @@ export class GeolocationComponent implements OnInit {
     setTimeout(() => {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
-          const clientPosition = {
+          const clientPos = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
-          this.infoWindow.setPosition(clientPosition);
+          this.clientPosition = clientPos;
+          this.infoWindow.setPosition(clientPos);
           this.infoWindow.setContent('Your position');
           this.infoWindow.open(this.map);
-          this.map.setCenter(clientPosition);
-          this.marker = new google.maps.Marker({position: clientPosition, map: this.map, draggable: true});
+          this.map.setCenter(clientPos);
+          this.clientMarker = new google.maps.Marker({position: clientPos, map: this.map, draggable: true});
+          this.stationMarker = new google.maps.Marker({position: this.stationPosition, map: this.map});
+
+          // listen for client's position change
+          google.maps.event.addListener(this.clientMarker, 'dragend', (posi: any) =>  {
+            const lat = posi.latLng.lat().toFixed(4);
+            const lng = posi.latLng.lng().toFixed(4);
+            console.log(`lat: ${lat}, lng: ${lng}`);
+            return this.clientPosition = posi.latLng;
+          });
+
         }, () => {
           handleLocationError(true, this.map, this.map.getCenter());
         });
@@ -55,6 +75,28 @@ export class GeolocationComponent implements OnInit {
         'Error: Your browser doesn\'t support geolocation.');
       infoWindow.open(this.map);
     }
+  }
+
+  sendHelp() {
+    // get directions
+    const directionsRequest = {
+      origin: this.stationPosition,
+      destination: this.clientPosition,
+      travelMode: google.maps.TravelMode.DRIVING
+    };
+
+    this.dirService.route(directionsRequest, (response, status) => {
+      if (status === google.maps.DirectionsStatus.OK) {
+        this.dirDisplay.setDirections(response);
+        console.log(response);
+      } else {
+        console.log('Directions could not be obtained ' + status);
+      }
+    });
+
+    // do magic with the renderer
+    this.renderer.setProperty(
+      this.infoEl.nativeElement, 'innerHTML',  'Tech. pagalbos preliminarus atvykimo laikas {{ this.arrivalTime }}');
   }
 
 }
