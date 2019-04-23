@@ -1,0 +1,24 @@
+<div class="container">
+  <div class="row">
+    <div class="col-sm-4 mx-auto instructions">
+      <h3 class="instructions__text">Įveskite mašinos numerį</h3>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-4 mx-auto form">
+      <form (ngSubmit)="submit(f)" #f="ngForm">
+        <div class="form-group">
+          <input type="text" class="form-control form__input"
+            id="license-plate" placeholder="Mašinos nr."
+            ngModel name="licensePlate" required minlength="2">
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-4 mx-auto button">
+      <button class="btn btn-success form__button" [disabled]="!f.valid" [routerLink]="['/geolocation']">Toliau</button>
+      <p class="help-text">Reikia pagalbos?</p>
+    </div>
+  </div>
+</div>
