@@ -17,10 +17,9 @@ export class GeolocationComponent implements OnInit {
   stationPosition = new google.maps.LatLng(54.9299, 23.9969);
   dirService = new google.maps.DirectionsService;
   dirDisplay = new google.maps.DirectionsRenderer;
-
   cString = 'You';
   infoWindow = new google.maps.InfoWindow;
-  arrivalTime = '21:00';
+  arrivalTime = '';
 
   constructor(private renderer: Renderer2) { }
 
@@ -34,6 +33,9 @@ export class GeolocationComponent implements OnInit {
 
     // init map
     this.map = new google.maps.Map(this.mapEl.nativeElement, mapProperties);
+
+    // init directions
+    this.dirDisplay.setMap(this.map);
 
     // delay prompt for geolocation usage
     setTimeout(() => {
@@ -79,24 +81,29 @@ export class GeolocationComponent implements OnInit {
 
   sendHelp() {
     // get directions
-    const directionsRequest = {
+    const dirRequest = {
       origin: this.stationPosition,
       destination: this.clientPosition,
       travelMode: google.maps.TravelMode.DRIVING
     };
 
-    this.dirService.route(directionsRequest, (response, status) => {
+    this.dirService.route(dirRequest, (response, status) => {
       if (status === google.maps.DirectionsStatus.OK) {
         this.dirDisplay.setDirections(response);
-        console.log(response);
+        const now = new Date().getTime();
+        const arrTimeFromGM = (response.routes[0].legs[0].duration.value * 1000);
+        const arrivalTimeUTC = new Date(now + arrTimeFromGM);
+        this.arrivalTime = arrivalTimeUTC.getHours() + ':' +
+          (arrivalTimeUTC.getMinutes() < 10 ? '0' + arrivalTimeUTC.getMinutes() : arrivalTimeUTC.getMinutes());
+        console.log(this.arrivalTime);
+        this.renderer.setProperty(
+          this.infoEl.nativeElement, 'innerHTML',  `Tech. pagalbos preliminarus atvykimo laikas ${this.arrivalTime}`);
+        // do more magic with the renderer
+        // animate movement
       } else {
         console.log('Directions could not be obtained ' + status);
       }
     });
-
-    // do magic with the renderer
-    this.renderer.setProperty(
-      this.infoEl.nativeElement, 'innerHTML',  'Tech. pagalbos preliminarus atvykimo laikas {{ this.arrivalTime }}');
   }
 
 }
