@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef, Renderer2 } from '@angular/core';
 
 import {} from 'googlemaps';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-geolocation',
@@ -29,7 +30,7 @@ export class GeolocationComponent implements OnInit {
   timer = [];
   eol = [];
 
-  constructor(private renderer: Renderer2) { }
+  constructor(private renderer: Renderer2, private http: HttpClient) { }
 
   ngOnInit() {
     // set map properties
@@ -111,8 +112,8 @@ export class GeolocationComponent implements OnInit {
         // animate movement
         console.log(response.routes[0].legs[0]);
         const steps = response.routes[0].legs[0].steps;
-        const stepStartLatLngs: google.maps.LatLng[] = steps.map(path => path.start_location);
-        const stepEndLatLngs: google.maps.LatLng[] = steps.map(path => path.end_location);
+        const stepStartLatLngs: google.maps.LatLng[] = steps.map(p => p.start_location);
+        const stepEndLatLngs: google.maps.LatLng[] = steps.map(p => p.end_location);
         // console.log(steps);
 
         // define a car symbol
@@ -131,6 +132,10 @@ export class GeolocationComponent implements OnInit {
           geodesic: true,
           map: this.map
         });
+        const path = serviceCarPath.getPath();
+        const pathValues = path['j'].map(p => p);
+        const joined = pathValues.join('|').replace(/[()]/g, '').replace(/\s/g, '');
+        this.getSnap(joined);
         this.animateServiceCar(serviceCarPath);
       }
     });
@@ -145,5 +150,25 @@ export class GeolocationComponent implements OnInit {
       icons[0].offset = (count / 2) + '%';
       line.set('icons', icons);
     }, 100);
+  }
+
+  getSnap(path: any) {
+    const apiKey = 'AIzaSyDKF8G_KM0asCWUS4k_mTwcuc7Gu_nOEFg';
+    const settings = {
+      interpolate: true,
+      key: apiKey,
+      path: path
+    };
+    const headers = {
+        'Access-Control-Allow-Origin': 'http://localhost:4200'
+    };
+
+    // return this.http.get(`https://roads.googleapis.com/v1/snapToRoads${settings}`, { headers: headers})
+    return this.http.get(`https://roads.googleapis.com/v1/snapToRoads?path=${path}&interpolate=true&key=${apiKey}`)
+    .toPromise()
+    .then((response) => {
+      console.log(response);
+    })
+    .catch(err => console.log(err));
   }
 }
