@@ -13,6 +13,7 @@ export class GeolocationComponent implements OnInit {
   map: google.maps.Map;
   clientMarker: google.maps.Marker;
   clientPosition: any;
+  // for strategic reasons maybe it is wise to put the help station near the highway
   stationMarker: google.maps.Marker;
   stationPosition = new google.maps.LatLng(54.9299, 23.9969);
   dirService = new google.maps.DirectionsService;
@@ -20,6 +21,13 @@ export class GeolocationComponent implements OnInit {
   cString = 'You';
   infoWindow = new google.maps.InfoWindow;
   arrivalTime = '';
+  startLocation = [];
+  endLocation = [];
+  markers = [];
+  polylines = new google.maps.Polyline;
+  polylines2 = [];
+  timer = [];
+  eol = [];
 
   constructor(private renderer: Renderer2) { }
 
@@ -79,7 +87,7 @@ export class GeolocationComponent implements OnInit {
     }
   }
 
-  sendHelp() {
+  sendHelp(index: number) {
     // get directions
     const dirRequest = {
       origin: this.stationPosition,
@@ -93,17 +101,49 @@ export class GeolocationComponent implements OnInit {
         const now = new Date().getTime();
         const arrTimeFromGM = (response.routes[0].legs[0].duration.value * 1000);
         const arrivalTimeUTC = new Date(now + arrTimeFromGM);
+        const duration = response.routes[0].legs[0].duration.text;
         this.arrivalTime = arrivalTimeUTC.getHours() + ':' +
           (arrivalTimeUTC.getMinutes() < 10 ? '0' + arrivalTimeUTC.getMinutes() : arrivalTimeUTC.getMinutes());
-        console.log(this.arrivalTime);
+        console.log(duration);
+        // do magic with the renderer
         this.renderer.setProperty(
           this.infoEl.nativeElement, 'innerHTML',  `Tech. pagalbos preliminarus atvykimo laikas ${this.arrivalTime}`);
-        // do more magic with the renderer
         // animate movement
-      } else {
-        console.log('Directions could not be obtained ' + status);
+        console.log(response.routes[0].legs[0]);
+        const steps = response.routes[0].legs[0].steps;
+        const stepStartLatLngs: google.maps.LatLng[] = steps.map(path => path.start_location);
+        const stepEndLatLngs: google.maps.LatLng[] = steps.map(path => path.end_location);
+        // console.log(steps);
+
+        // define a car symbol
+        const serviceCar = {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          strokeColor: '#393'
+        };
+        // create the polyline and add the moving symbol to it
+        const serviceCarPath = new google.maps.Polyline({
+          path: stepStartLatLngs,
+          icons: [{
+            icon: serviceCar,
+            offset: '100%'
+          }],
+          geodesic: true,
+          map: this.map
+        });
+        this.animateServiceCar(serviceCarPath);
       }
     });
   }
 
+  // auxiliary functions
+  animateServiceCar(line: google.maps.Polyline) {
+    let count = 0;
+    window.setInterval(() => {
+      count = (count + 1) % 200;
+      const icons = line.get('icons');
+      icons[0].offset = (count / 2) + '%';
+      line.set('icons', icons);
+    }, 100);
+  }
 }
