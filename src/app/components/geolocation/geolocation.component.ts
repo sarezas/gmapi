@@ -153,7 +153,7 @@ export class GeolocationComponent implements OnInit {
   }
 
   getSnap(path: any) {
-    const apiKey = 'AIzaSyDKF8G_KM0asCWUS4k_mTwcuc7Gu_nOEFg';
+    const apiKey = '';
     const settings = {
       interpolate: true,
       key: apiKey,
