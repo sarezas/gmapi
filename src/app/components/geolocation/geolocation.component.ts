@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef, Renderer2 } from '@angular/core';
 
 import {} from 'googlemaps';
-import { HttpClient } from '@angular/common/http';
+import { RoadSnapshotService } from 'src/app/services/road-snaphost.service';
 
 @Component({
   selector: 'app-geolocation',
@@ -22,15 +22,13 @@ export class GeolocationComponent implements OnInit {
   cString = 'You';
   infoWindow = new google.maps.InfoWindow;
   arrivalTime = '';
-  startLocation = [];
-  endLocation = [];
-  markers = [];
-  polylines = new google.maps.Polyline;
-  polylines2 = [];
-  timer = [];
-  eol = [];
+  snappedPoints: any;
+  getSnap: any;
+  // -----------------
+  newPoly: any;
+  xxx: google.maps.LatLng[];
 
-  constructor(private renderer: Renderer2, private http: HttpClient) { }
+  constructor(private renderer: Renderer2, private snap: RoadSnapshotService) {}
 
   ngOnInit() {
     // set map properties
@@ -88,7 +86,7 @@ export class GeolocationComponent implements OnInit {
     }
   }
 
-  sendHelp(index: number) {
+  sendHelp(index?: number) {
     // get directions
     const dirRequest = {
       origin: this.stationPosition,
@@ -110,11 +108,9 @@ export class GeolocationComponent implements OnInit {
         this.renderer.setProperty(
           this.infoEl.nativeElement, 'innerHTML',  `Tech. pagalbos preliminarus atvykimo laikas ${this.arrivalTime}`);
         // animate movement
-        console.log(response.routes[0].legs[0]);
+        // console.log(response.routes[0].legs[0]);
         const steps = response.routes[0].legs[0].steps;
         const stepStartLatLngs: google.maps.LatLng[] = steps.map(p => p.start_location);
-        const stepEndLatLngs: google.maps.LatLng[] = steps.map(p => p.end_location);
-        // console.log(steps);
 
         // define a car symbol
         const serviceCar = {
@@ -122,8 +118,12 @@ export class GeolocationComponent implements OnInit {
           scale: 8,
           strokeColor: '#393'
         };
+        // get snappoints coords
+
+        // const snapCoords: any = this.snappedPoints.map(snap => snap.location);
         // create the polyline and add the moving symbol to it
         const serviceCarPath = new google.maps.Polyline({
+          // how to get the road snapshot here instead of stepStartLatLngs ??? ? ? ?
           path: stepStartLatLngs,
           icons: [{
             icon: serviceCar,
@@ -132,11 +132,33 @@ export class GeolocationComponent implements OnInit {
           geodesic: true,
           map: this.map
         });
+
+        // get path coordinates for the road snapshot
+        console.log(serviceCarPath.getPath());
         const path = serviceCarPath.getPath();
         const pathValues = path['j'].map(p => p);
-        const joined = pathValues.join('|').replace(/[()]/g, '').replace(/\s/g, '');
-        this.getSnap(joined);
-        this.animateServiceCar(serviceCarPath);
+        const pathCoords = pathValues.join('|').replace(/[()]/g, '').replace(/\s/g, '');
+
+        // get road snapshot from the API
+        this.snap.getSnap(pathCoords).then((data: any) =>  {
+          let snapped = [];
+          for (let i = 0; i < data.length; i++) {
+            const latLng = new google.maps.LatLng(
+              data[i].latitude,
+              data[i].longitude);
+              snapped.push(latLng);
+          }
+          const newPoly = new google.maps.Polyline({
+            path: snapped,
+            strokeColor: 'black',
+            strokeWeight: 3
+          });
+          const newPath = newPoly.getPath();
+          const newPathVals = newPath['j'].map(p => p);
+          const newPathCoords = newPathVals.join('|').replace(/[()]/g, '').replace(/\s/g, '');
+          console.log(newPathCoords);
+          // this.animateServiceCar(newPath);
+        });
       }
     });
   }
@@ -150,25 +172,5 @@ export class GeolocationComponent implements OnInit {
       icons[0].offset = (count / 2) + '%';
       line.set('icons', icons);
     }, 100);
-  }
-
-  getSnap(path: any) {
-    const apiKey = '';
-    const settings = {
-      interpolate: true,
-      key: apiKey,
-      path: path
-    };
-    const headers = {
-        'Access-Control-Allow-Origin': 'http://localhost:4200'
-    };
-
-    // return this.http.get(`https://roads.googleapis.com/v1/snapToRoads${settings}`, { headers: headers})
-    return this.http.get(`https://roads.googleapis.com/v1/snapToRoads?path=${path}&interpolate=true&key=${apiKey}`)
-    .toPromise()
-    .then((response) => {
-      console.log(response);
-    })
-    .catch(err => console.log(err));
   }
 }
